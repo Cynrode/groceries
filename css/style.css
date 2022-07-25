@@ -1,0 +1,57 @@
+/******************************************
+/* POSITIONING
+/*******************************************/
+
+body {
+    height: 100vh;
+    width: 100vw;
+    overflow: hidden;
+    margin: 0;
+    display: grid;
+    grid-template-columns: 200px 1fr;
+    grid-template-rows: auto 1fr;
+}
+  
+header {
+    grid-column: 1/3;
+    background-color: #add790;
+    text-align: center;
+}
+  
+main .lead-items {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    overflow-y: auto;
+    padding: 1em;
+    text-align: center;
+}
+
+main .recipe {
+    display: grid;
+    width: 40%;
+    margin: auto;
+    border: 1px solid black;
+}
+
+nav {
+    overflow-y: auto;
+    padding: 1em;
+    background-color: orange;
+}
+
+
+
+/******************************************
+/* BASE STYLES
+/*******************************************/
+
+html {
+    font-size: 62.5%;
+    background-color: #181a1b;
+}
+
+a {
+    font-size: 2.5rem;
+    line-height: 5rem;
+    text-decoration: none;
+}  
