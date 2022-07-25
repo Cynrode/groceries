@@ -36,7 +36,8 @@ class MainGui:
         self.recipesTitle = tk.Label(body, text='Recipes', font=("Arial", 15))
         self.groceryTitle = tk.Label(body, text='Grocery List', font=("Arial", 15))
         self.addRecipe = partial(addRecipe, )
-        self.recListbox = tk.Listbox(body)
+        self.recVar = tk.Variable(value='')
+        self.recListbox = tk.Listbox(body, listvariable=self.recVar)
         self.recListbox.bind('<Double-Button-1>', addRecipe)
         self.glbList = []
         self.glbVar = tk.Variable(value='')
@@ -189,6 +190,7 @@ def create_project(conn):
 
 
 def initDataDB(conn, recipeList):
+    print('looking')
     dbList = lookAtDB(conn)
     len(dbList)
     addRecipe(conn, recipeList, dbList)
@@ -203,23 +205,21 @@ def lookAtDB(conn):
 
 # adds point into an INSERT statement if it doesn't already exist in the database
 def addRecipe(conn, recipeList, dbList):
-    print(recipeList)
-    print(dbList)
     curs = conn.cursor()
     for i in recipeList:
         ingredientColumns = 'ingredient1'
         numArgs = '?,?,?'
+        j = 0
         for j in range(1, len(i) - 2):
             ingredientColumns += f',ingredient{j + 1}'
             numArgs += f',?'
         insert = f'INSERT INTO Recipes(title, description, {ingredientColumns})'
         sqlCmd = f'{insert} VALUES({numArgs})'
-        for ele in dbList:
-            if ele in dbList:
-                continue
-            else:
-                curs.execute(sqlCmd, i)
-                conn.commit()
+        if i in dbList:
+            print(10)
+        else:
+            curs.execute(sqlCmd, i)
+
     rowUpdateStatement(len(dbList), curs, conn)
 
 
