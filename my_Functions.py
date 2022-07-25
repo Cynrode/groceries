@@ -203,11 +203,12 @@ def lookAtDB(conn):
 
 # adds point into an INSERT statement if it doesn't already exist in the database
 def addRecipe(conn, recipeList, dbList):
+    print(recipeList)
+    print(dbList)
     curs = conn.cursor()
     for i in recipeList:
         ingredientColumns = 'ingredient1'
         numArgs = '?,?,?'
-        j = 0
         for j in range(1, len(i) - 2):
             ingredientColumns += f',ingredient{j + 1}'
             numArgs += f',?'
@@ -247,11 +248,11 @@ def pullRecord(master, conn, self):
     addGroceries(record, conn, master)
 
 
+tempList = []
 def addGroceries(record, conn, master):
     listbox = []
-    tempList = []
-    dicts = {}
-    glbList = [*master.glbVar.get()]
+    temptemplist = []
+    glbList = []
     value = ['NULL', record[0], record[1]]
     for i in record:
         if i in value:
@@ -260,3 +261,10 @@ def addGroceries(record, conn, master):
             if i is not None:
                 listbox.append(i)
     for i in listbox:
+        tempList.append(i)
+    tempSet = set(tempList)
+    for i in tempSet:
+        temptemplist.append(f'{i} ({tempList.count(i)})')
+    for i in temptemplist:
+        glbList.append(i)
+    master.glbVar.set(glbList)
