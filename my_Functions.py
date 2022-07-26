@@ -108,7 +108,6 @@ def read_dbinit_file():
             # variable point
             recipe = line.strip('\n').split(',')
             recipeList.append(recipe)
-    print(f'recipeList{recipeList}')
     return recipeList
 
 
@@ -144,12 +143,13 @@ def lookAtDB(conn):
 
 def pullRecTitles(conn):
     curs = conn.cursor()
-    curs.execute('SELECT title FROM Recipes ORDER BY description DESC')
+    sqlCmd = (f"SELECT title FROM Recipes ORDER BY description DESC")
+    curs.execute(sqlCmd)
     titles = curs.fetchall()
     return titles
 
 
-def pullRecIngredients(conn, recipeTitle):
+def pullRecIngredients(conn, recipeTitle='*'):
     curs = conn.cursor()
     x = 'ingredient1'
     for i in range(14):
@@ -159,16 +159,21 @@ def pullRecIngredients(conn, recipeTitle):
     return ingredientList
 
 
-def addRecipe(conn, recipeList):
+def addRecipe(conn, recipeListFile):
     curs = conn.cursor()
     dbRecTitles = pullRecTitles(conn)
-    for recipe in recipeList:
-            print('')
-            print(f'dbRecTitles: {dbRecTitles}\nrecipe: {recipe}')
-            if any(recipe in i for i in dbRecTitles):
-                print('in')
-                continue
-            else:
+    recipeFileTitles = ([recipe[0] for recipe in recipeListFile])
+    # Using list comprehension, we compile recipe titles into one list
+    dbTitles = [title for title, in dbRecTitles]
+    for recipeFileTitle in recipeFileTitles:
+        # print(f'recipeFileTitle: {recipeFileTitle}'
+        #      f'\ndbTitles: {dbTitles}\n')
+        if recipeFileTitle in dbTitles:
+            print(f'{recipeFileTitle} is already in the database')
+            continue
+        else:
+            print(f'trying to add recipe {recipeFileTitle}')
+            for recipe in recipeListFile:
                 ingredientColumns = 'ingredient1'
                 numArgs = '?,?,?'
                 for j in range(1, len(recipe)-2):
@@ -180,7 +185,6 @@ def addRecipe(conn, recipeList):
                 conn.commit()
 
     #rowUpdateStatement(len(dbList), curs, conn)
-    print(lookAtDB(conn))
 
 
 # A statement that prints when database is asked to update information
