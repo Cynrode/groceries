@@ -36,8 +36,7 @@ class MainGui:
         self.recipesTitle = tk.Label(body, text='Recipes', font=("Arial", 15))
         self.groceryTitle = tk.Label(body, text='Grocery List', font=("Arial", 15))
         self.addRecipe = partial(addRecipe, )
-        self.recVar = tk.Variable(value='')
-        self.recListbox = tk.Listbox(body, listvariable=self.recVar)
+        self.recListbox = tk.Listbox(body)
         self.recListbox.bind('<Double-Button-1>', addRecipe)
         self.glbList = []
         self.glbVar = tk.Variable(value='')
@@ -99,54 +98,17 @@ class MainGui:
         master.columnconfigure(1, weight=1)
 
 
-
-
-class Recipe:
-    def __init__(self, title, ingredient1, ingredient2='NULL', ingredient3='NULL',
-                 ingredient4='NULL', ingredient5='NULL', ingredient6='NULL',
-                 ingredient7='NULL', ingredient8='NULL', ingredient9='NULL',
-                 ingredient10='NULL', ingredient11='NULL', ingredient12='NULL',
-                 ingredient13='NULL', ingredient14='NULL', ingredient15='NULL',
-                 description=""):
-        self.title = title
-        self.ingredient1 = ingredient1
-        self.ingredient2 = ingredient2
-        self.ingredient3 = ingredient3
-        self.ingredient4 = ingredient4
-        self.ingredient5 = ingredient5
-        self.ingredient6 = ingredient6
-        self.ingredient7 = ingredient7
-        self.ingredient8 = ingredient8
-        self.ingredient9 = ingredient9
-        self.ingredient10 = ingredient10
-        self.ingredient11 = ingredient11
-        self.ingredient12 = ingredient12
-        self.ingredient13 = ingredient13
-        self.ingredient14 = ingredient14
-        self.ingredient15 = ingredient15
-        self.description = description
-
-
 def read_dbinit_file():
     recipeList = []
+    print('')
     with open('seedRecipes.txt') as file:
         # iterate through each line in the file
         for line in file:
             # separates each line into items using the ',' as a delimiter, strips the trailing space and saves it as
             # variable point
             recipe = line.strip('\n').split(',')
-            # iterates through each point and if it has a '.' in it, it converts it to a float. Otherwise, it casts
-            # it as a string.
-            # sets line as object newPoint class GeoPoint entering the attributes by index value
-            i = 0
-            tempRecipe = []
-            for item in recipe:
-                tempRecipe.append(recipe[i])
-                tuple(tempRecipe)
-                i += 1
-
-            # appends the object onto the pointList.
-            recipeList.append(tempRecipe)
+            recipeList.append(recipe)
+    print(f'recipeList{recipeList}')
     return recipeList
 
 
@@ -166,34 +128,11 @@ def create_connection():
 def create_project(conn):
     print('Verifying table initialization', end="... ")
     curs = conn.cursor()
-    curs.execute('''
-                CREATE TABLE IF NOT EXISTS Recipes(
-                            title        TEXT NOT NULL  PRIMARY KEY,
-                            description  TEXT NULL, 
-                            ingredient1  TEXT NULL,
-                            ingredient2  TEXT NULL,
-                            ingredient3  TEXT NULL,
-                            ingredient4  TEXT NULL,
-                            ingredient5  TEXT NULL,
-                            ingredient6  TEXT NULL,
-                            ingredient7  TEXT NULL,
-                            ingredient8  TEXT NULL,
-                            ingredient9  TEXT NULL,
-                            ingredient10 TEXT NULL,
-                            ingredient11 TEXT NULL,
-                            ingredient12 TEXT NULL,
-                            ingredient13 TEXT NULL,
-                            ingredient14 TEXT NULL,
-                            ingredient15 TEXT NULL
-                            )
-            ''')
-
-
-def initDataDB(conn, recipeList):
-    print('looking')
-    dbList = lookAtDB(conn)
-    len(dbList)
-    addRecipe(conn, recipeList, dbList)
+    x = 'description TEXT NULL'
+    for i in range(15):
+        x += f',ingredient{i+1} TEXT NULL'
+    sqlCmd = f'CREATE TABLE IF NOT EXISTS Recipes(title TEXT NOT NULL PRIMARY KEY,{x})'
+    curs.execute(sqlCmd)
 
 
 def lookAtDB(conn):
@@ -203,36 +142,57 @@ def lookAtDB(conn):
     return recipeRows
 
 
-# adds point into an INSERT statement if it doesn't already exist in the database
-def addRecipe(conn, recipeList, dbList):
+def pullRecTitles(conn):
     curs = conn.cursor()
-    for i in recipeList:
-        ingredientColumns = 'ingredient1'
-        numArgs = '?,?,?'
-        j = 0
-        for j in range(1, len(i) - 2):
-            ingredientColumns += f',ingredient{j + 1}'
-            numArgs += f',?'
-        insert = f'INSERT INTO Recipes(title, description, {ingredientColumns})'
-        sqlCmd = f'{insert} VALUES({numArgs})'
-        if i in dbList:
-            print(10)
-        else:
-            curs.execute(sqlCmd, i)
+    curs.execute('SELECT title FROM Recipes ORDER BY description DESC')
+    titles = curs.fetchall()
+    return titles
 
-    rowUpdateStatement(len(dbList), curs, conn)
+
+def pullRecIngredients(conn, recipeTitle):
+    curs = conn.cursor()
+    x = 'ingredient1'
+    for i in range(14):
+        x += f',ingredient{i+1}'
+    curs.execute(f'SELECT {x} WHERE title = "{recipeTitle}"')
+    ingredientList = curs.fetchall()
+    return ingredientList
+
+
+def addRecipe(conn, recipeList):
+    curs = conn.cursor()
+    dbRecTitles = pullRecTitles(conn)
+    for recipe in recipeList:
+            print('')
+            print(f'dbRecTitles: {dbRecTitles}\nrecipe: {recipe}')
+            if any(recipe in i for i in dbRecTitles):
+                print('in')
+                continue
+            else:
+                ingredientColumns = 'ingredient1'
+                numArgs = '?,?,?'
+                for j in range(1, len(recipe)-2):
+                    ingredientColumns += f',ingredient{j + 1}'
+                    numArgs += f',?'
+                insert = f'INSERT INTO Recipes(title, description, {ingredientColumns})'
+                sqlCmd = f'{insert} VALUES({numArgs})'
+                curs.execute(sqlCmd, recipe)
+                conn.commit()
+
+    #rowUpdateStatement(len(dbList), curs, conn)
+    print(lookAtDB(conn))
 
 
 # A statement that prints when database is asked to update information
 def rowUpdateStatement(numb, curs, conn):
-    lookAtDB(conn)
-    numChanges = len(curs.fetchall()) - numb
+    numChanges = len(lookAtDB(conn)) - numb
     if numChanges > 0:
         print("\t\t\t\tRecords inserted successfully into Recipes table:", numChanges, "\n")
     else:
         print("\t\t\t\tNo new records were added to Recipes table\n")
 
 
+# loads recipes from database into the recipes listbox
 def loadRecipes(master, recipeRows):
     for i in recipeRows:
         master.recListbox.insert(tk.END, i[0])

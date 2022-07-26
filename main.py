@@ -13,7 +13,7 @@ app = MainGui(root)
 
 conn = create_connection()
 create_project(conn)
-initDataDB(conn, read_dbinit_file())
+addRecipe(conn, read_dbinit_file())
 loadRecipes(app, lookAtDB(conn))
 
 pullRecord = partial(pullRecord, app, conn)
