@@ -164,8 +164,10 @@ def addRecipe(conn, recipeListFile):
     dbRecTitles = pullRecTitles(conn)
     recipeFileTitles = ([recipe[0] for recipe in recipeListFile])
     # Using list comprehension, we compile recipe titles into one list
-    dbTitles = [title for title, in dbRecTitles]
+
     for recipeFileTitle in recipeFileTitles:
+        dbRecTitles = pullRecTitles(conn)
+        dbTitles = [title for title, in dbRecTitles]
         # print(f'recipeFileTitle: {recipeFileTitle}'
         #      f'\ndbTitles: {dbTitles}\n')
         if recipeFileTitle in dbTitles:
