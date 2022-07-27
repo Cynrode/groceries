@@ -161,20 +161,17 @@ def pullRecIngredients(conn, recipeTitle='*'):
 
 def addRecipe(conn, recipeListFile):
     curs = conn.cursor()
-    dbRecTitles = pullRecTitles(conn)
+    # Using list comprehension, we compile recipe titles from our recipefileseed into one list to prevent duplication
     recipeFileTitles = ([recipe[0] for recipe in recipeListFile])
-    # Using list comprehension, we compile recipe titles into one list
-
     for recipeFileTitle in recipeFileTitles:
         dbRecTitles = pullRecTitles(conn)
+        # Using list comprehension, we compile recipe titles from our database into one list to prevent duplication
         dbTitles = [title for title, in dbRecTitles]
-        # print(f'recipeFileTitle: {recipeFileTitle}'
-        #      f'\ndbTitles: {dbTitles}\n')
         if recipeFileTitle in dbTitles:
-            print(f'{recipeFileTitle} is already in the database')
+            # print(f'{recipeFileTitle} is already in the database')
             continue
         else:
-            print(f'trying to add recipe {recipeFileTitle}')
+            # print(f'trying to add recipe {recipeFileTitle}')
             for recipe in recipeListFile:
                 ingredientColumns = 'ingredient1'
                 numArgs = '?,?,?'
@@ -210,27 +207,30 @@ def pullRecord(master, conn, self):
     name = [master.recListbox.get(tk.ANCHOR)]
     sqlCom = '''SELECT * FROM Recipes WHERE title = (?)'''
     curs.execute(sqlCom, name)
-    record = curs.fetchone()
-    addGroceries(record, conn, master)
+    selectedRecipe = curs.fetchone()
+    addGroceries(selectedRecipe, master)
 
 
-tempList = []
-def addGroceries(record, conn, master):
-    listbox = []
-    temptemplist = []
+globalGroceryList = []
+
+
+def addGroceries(selectedRecipe, master):
+    tempTemplist = []
     glbList = []
-    value = ['NULL', record[0], record[1]]
-    for i in record:
-        if i in value:
+    # used to pull out information from recipe record that aren't ingredients with following if statement
+    notIngredients = ['NULL', selectedRecipe[0], selectedRecipe[1]]
+    for i in selectedRecipe:
+        if i in notIngredients:
             continue
         else:
             if i is not None:
-                listbox.append(i)
-    for i in listbox:
-        tempList.append(i)
-    tempSet = set(tempList)
+                globalGroceryList.append(i)
+    # tempSet creates a set that removes redundant entries in our globalGroceryList to prepare formatting for our
+    # grocery listbox display
+    tempSet = set(globalGroceryList)
+    print(tempSet)
     for i in tempSet:
-        temptemplist.append(f'{i} ({tempList.count(i)})')
-    for i in temptemplist:
+        tempTemplist.append(f'{i} ({globalGroceryList.count(i)})')
+    for i in tempTemplist:
         glbList.append(i)
     master.glbVar.set(glbList)
