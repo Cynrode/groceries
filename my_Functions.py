@@ -12,10 +12,11 @@ Errors = []
 class MainGui():
     def __init__(self, master):
         myFrame = tk.Frame(master)
-        myFrame.pack
         top = tk.Frame(master)
         body = tk.Frame(master)
         bottom = tk.Frame(master)
+        textInfo = tk.Frame(bottom, highlightbackground='grey', highlightthickness=1,
+                            background='white', border=2, height=5, width=7)
 
         # Status bar
         self.statusVar = tk.StringVar()
@@ -52,9 +53,20 @@ class MainGui():
         self.add_item = tk.Button(body, text='Add Item', command=ErrorWindow)
         self.remove_item = tk.Button(body, text='Remove Item', command=ErrorWindow)
         # bottom
-        self.frame = tk.Frame(bottom)
-        self.textInfo = tk.Text(bottom, width=7, height=7)
+        # self.frame = tk.Frame(bottom)
         self.saveBut = tk.Button(bottom, text='Save', command=ErrorWindow)
+        # textInfo Frame
+        self.TIdescriptVar = tk.StringVar()
+        self.TIdescriptVar.set("Description: ")
+        self.TIdescription = tk.Label(textInfo, textvariable=self.TIdescriptVar)
+
+        self.TIingredVar = tk.StringVar()
+        self.TIingredVar.set("Ingredients: ")
+        self.TIingredients = tk.Label(textInfo, textvariable=self.TIingredVar)
+
+        self.TIlinkVar = tk.StringVar()
+        self.TIlinkVar.set("Recipe Link: ")
+        self.TIlink = tk.Label(textInfo, textvariable=self.TIlinkVar)
 
         # grid
         # Top
@@ -81,9 +93,14 @@ class MainGui():
 
         # bottom
         bottom.grid(row=2, column=0, columnspan=2, sticky='nsew')
-        self.textInfo.grid(row=0, column=1, columnspan=2, sticky='nsew')
+        textInfo.grid(row=0, column=1, columnspan=2, sticky='nsew')
         self.saveBut.grid(row=1, column=0, columnspan=3, pady=5)
         self.statusBar.grid(row=3, column=0, columnspan=2, sticky='we')
+
+        # textInfo Frame
+        self.TIdescription.grid(row=0)
+        self.TIingredients.grid(row=1)
+        self.TIlink.grid(row=2)
 
         # Geometry for dynamic resizing
         body.columnconfigure(0, weight=1)
@@ -127,20 +144,16 @@ def read_dbinit_file(master):
         Errors.append('Error reading startup recipes')
 
 
-
-
 def create_connection(gui):
-    dbname = 'Grocery_DB'
-    conn = None
     try:
+        dbname = 'Grocery_DB'
+        conn = None
         gui.statusVar.set('Connecting to database')
         conn = sqlite3.connect(dbname)
-        return conn
         gui.statusVar.set('Connected')
+        return conn
     except:
         Errors.append('Error connecting to the database')
-
-
 
 
 # verifies if table 'TblPoints' exists. If not, it creates it.
@@ -151,7 +164,7 @@ def create_project(conn, master):
         curs = conn.cursor()
         x = 'description TEXT NULL'
         for i in range(15):
-            x += f',ingredient{i+1} TEXT NULL'
+            x += f',ingredient{i + 1} TEXT NULL'
         sqlCmd = f'CREATE TABLE IF NOT EXISTS Recipes(title TEXT NOT NULL PRIMARY KEY,{x})'
         curs.execute(sqlCmd)
         master.statusVar.set('Table verified/created')
@@ -166,11 +179,10 @@ def lookAtDB(conn, gui):
         curs = conn.cursor()
         curs.execute('SELECT * FROM Recipes ORDER BY description ASC')
         recipeRows = curs.fetchall()
-        return recipeRows
         gui.statusVar.set('Database recipes fetched')
+        return recipeRows
     except:
         Errors.append('Error looking at the database')
-
 
 
 def pullRecTitles(conn, gui):
@@ -180,11 +192,10 @@ def pullRecTitles(conn, gui):
         sqlCmd = (f"SELECT title FROM Recipes ORDER BY description DESC")
         curs.execute(sqlCmd)
         titles = curs.fetchall()
-        return titles
         gui.statusVar.set('Recipe list created')
+        return titles
     except:
         Errors.append('Error retrieving recipe titles')
-
 
 
 def pullRecIngredients(conn, gui, recipeTitle='*'):
@@ -193,14 +204,13 @@ def pullRecIngredients(conn, gui, recipeTitle='*'):
         curs = conn.cursor()
         x = 'ingredient1'
         for i in range(14):
-            x += f',ingredient{i+1}'
+            x += f',ingredient{i + 1}'
         curs.execute(f'SELECT {x} WHERE title = "{recipeTitle}"')
         ingredientList = curs.fetchall()
-        return ingredientList
         gui.statusVar.set(f'List of ingredients for {recipeTitle} retrieved')
+        return ingredientList
     except:
         Errors.append(f'Error retrieving ingredients for {recipeTitle}')
-
 
 
 def addRecipe(conn, recipeListFile, gui):
@@ -222,7 +232,7 @@ def addRecipe(conn, recipeListFile, gui):
                 for recipe in recipeListFile:
                     ingredientColumns = 'ingredient1'
                     numArgs = '?,?,?'
-                    for j in range(1, len(recipe)-2):
+                    for j in range(1, len(recipe) - 2):
                         ingredientColumns += f',ingredient{j + 1}'
                         numArgs += f',?'
                     insert = f'INSERT INTO Recipes(title, description, {ingredientColumns})'
@@ -233,10 +243,10 @@ def addRecipe(conn, recipeListFile, gui):
         Errors.append(f'recipeListFile failed to load')
     except sqlite3.IntegrityError:
         Errors.append(f'{recipeFileTitle} failed to process. Recipe already exists in DB')
-            #except:
+        # except:
     #    Errors.append(f'Error adding recipe')
 
-    #rowUpdateStatement(len(dbList), curs, conn, gui)
+    # rowUpdateStatement(len(dbList), curs, conn, gui)
 
 
 # A statement that prints when database is asked to update information
@@ -260,10 +270,10 @@ def loadRecipes(master, recipeRows):
 
 
 def pullRecord(master, conn, self):
+    name = [master.recListbox.get(tk.ANCHOR)]
     try:
         conn.text_factory = str
         curs = conn.cursor()
-        name = [master.recListbox.get(tk.ANCHOR)]
         master.statusVar.set(f'Fetching recipe from database for {name}')
         sqlCom = '''SELECT * FROM Recipes WHERE title = (?)'''
         curs.execute(sqlCom, name)
