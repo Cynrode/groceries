@@ -9,8 +9,11 @@ globalGroceryList = []
 Errors = []
 
 
-class MainGui():
-    def __init__(self, master):
+class MainGui(tk.Frame):
+    def __init__(self, master, *args, **kwargs):
+        tk.Frame.__init__(self, master, *args, **kwargs)
+
+        self.master = master
         myFrame = tk.Frame(master)
         top = tk.Frame(master)
         body = tk.Frame(master)
@@ -48,7 +51,7 @@ class MainGui():
         self.glbVar = tk.Variable(value='')
         self.grocListbox = tk.Listbox(body, listvariable=self.glbVar)
         # buttons
-        self.add_recipe = tk.Button(body, text='Add Recipe', command=ErrorWindow)
+        self.add_recipe = tk.Button(body, text='Add Recipe', command=Window)
         self.remove_recipe = tk.Button(body, text='Remove Recipe', command=ErrorWindow)
         self.add_item = tk.Button(body, text='Add Item', command=ErrorWindow)
         self.remove_item = tk.Button(body, text='Remove Item', command=ErrorWindow)
@@ -120,8 +123,34 @@ class MainGui():
         master.columnconfigure(1, weight=1)
 
 
+class Window(tk.Toplevel):
+    def __init__(self, *args, **kwargs):
+        tk.Toplevel.__init__(self, *args, **kwargs)
+        self.grab_set()
+        self.recipeLabel = tk.Label(self, text='Recipe Name', anchor='w')
+        self.recipeField = tk.Entry(self)
+        self.ingredientLabels = {}
+        self.ingredientEntrys = {}
+        self.submitButton = tk.Button(self, text='Submit')
+        for i in range(1, 16):
+            name = ('ingredient' + str(i))
+            self.ingredientLabels[name] = tk.Label(self, text='Ingredient'+str(i),
+                                                   anchor='w').grid(column=0, row=i+1, padx=7,
+                                                                                        stick='ew')
+            self.ingredientEntrys[name] = tk.Entry(self).grid(column=1, row=i+1, padx=10, sticky='ew')
+
+        self.recipeLabel.grid(row=0, column=0, padx=10)
+        self.recipeField.grid(row=0, column=1, padx=10)
+        self.submitButton.grid(row=17, column=0, columnspan=2, pady=10)
+
+
+
 def ErrorWindow():
     tk.messagebox.showinfo("Error", "This feature is currently in development")
+
+
+def recipeCapture(self):
+    return
 
 
 def read_dbinit_file(master):
