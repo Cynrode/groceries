@@ -11,10 +11,13 @@ from my_Functions import *
 root = tk.Tk()
 app = MainGui(root)
 
-conn = create_connection()
-create_project(conn)
-addRecipe(conn, read_dbinit_file())
-loadRecipes(app, lookAtDB(conn))
+conn = create_connection(app)
+create_project(conn, app)
+db_init_fileList = read_dbinit_file(app)
+addRecipe(conn, db_init_fileList, app)
+loadRecipes(app, lookAtDB(conn, app))
+Errors = reportErrors(app)
+
 
 pullRecord = partial(pullRecord, app, conn)
 app.recListbox.bind('<Double-Button-1>', pullRecord)

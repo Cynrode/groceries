@@ -1,12 +1,15 @@
 import sqlite3
-from sqlite3 import Error
 import tkinter as tk
 from tkinter import Menu
 from functools import partial
+from tkinter import messagebox
+
+# Global Variables
+globalGroceryList = []
+Errors = []
 
 
-# Creates connection to database
-class MainGui:
+class MainGui():
     def __init__(self, master):
         myFrame = tk.Frame(master)
         myFrame.pack
@@ -15,7 +18,9 @@ class MainGui:
         bottom = tk.Frame(master)
 
         # Status bar
-        self.statusBar = tk.Label(master, text='Working on it', bd=1, relief='sunken', anchor='w')
+        self.statusVar = tk.StringVar()
+        self.statusVar.set("Initial Value")
+        self.statusBar = tk.Label(master, textvariable=self.statusVar, bd=1, relief='sunken', anchor='w')
 
         master.geometry("625x550")
         master.title("Recipes to Groceries List")
@@ -30,7 +35,7 @@ class MainGui:
             command=master.destroy,
         )
         # top
-        self.instructions = tk.Label(top, text='We put the instructions here',
+        self.instructions = tk.Label(top, text='Double click recipes to add ingredients to your shopping list\n',
                                      font=25, padx=5, pady=5)
         # body
         self.recipesTitle = tk.Label(body, text='Recipes', font=("Arial", 15))
@@ -42,14 +47,14 @@ class MainGui:
         self.glbVar = tk.Variable(value='')
         self.grocListbox = tk.Listbox(body, listvariable=self.glbVar)
         # buttons
-        self.add_recipe = tk.Button(body, text='Add Recipe')
-        self.remove_recipe = tk.Button(body, text='Remove Recipe')
-        self.add_item = tk.Button(body, text='Add Item')
-        self.remove_item = tk.Button(body, text='Remove Item')
+        self.add_recipe = tk.Button(body, text='Add Recipe', command=ErrorWindow)
+        self.remove_recipe = tk.Button(body, text='Remove Recipe', command=ErrorWindow)
+        self.add_item = tk.Button(body, text='Add Item', command=ErrorWindow)
+        self.remove_item = tk.Button(body, text='Remove Item', command=ErrorWindow)
         # bottom
         self.frame = tk.Frame(bottom)
         self.textInfo = tk.Text(bottom, width=7, height=7)
-        self.saveBut = tk.Button(bottom, text='Save')
+        self.saveBut = tk.Button(bottom, text='Save', command=ErrorWindow)
 
         # grid
         # Top
@@ -98,139 +103,217 @@ class MainGui:
         master.columnconfigure(1, weight=1)
 
 
-def read_dbinit_file():
+def ErrorWindow():
+    tk.messagebox.showinfo("Error", "This feature is currently in development")
+
+
+def read_dbinit_file(master):
     recipeList = []
-    print('')
-    with open('seedRecipes.txt') as file:
-        # iterate through each line in the file
-        for line in file:
-            # separates each line into items using the ',' as a delimiter, strips the trailing space and saves it as
-            # variable point
-            recipe = line.strip('\n').split(',')
-            recipeList.append(recipe)
-    return recipeList
+    global Errors
+    try:
+        master.statusVar.set('Reading startup recipes')
+        with open('seedRecipes.txt') as file:
+            # iterate through each line in the file
+            for line in file:
+                # separates each line into items using the ',' as a delimiter, strips the trailing space and saves it as
+                # variable point
+                recipe = line.strip('\n').split(',')
+                recipeList.append(recipe)
+        master.statusVar.set('Starter recipe list created')
+        return recipeList
+    except FileNotFoundError:
+        Errors.append('SeedRecipes.txt file is missing')
+    except:
+        Errors.append('Error reading startup recipes')
 
 
-def create_connection():
+
+
+def create_connection(gui):
     dbname = 'Grocery_DB'
     conn = None
-    print(f'Establishing connection to {dbname}', end="... ")
     try:
+        gui.statusVar.set('Connecting to database')
         conn = sqlite3.connect(dbname)
-    except Error as e:
-        print(e)
-    print('\t\tConnected')
-    return conn
+        return conn
+        gui.statusVar.set('Connected')
+    except:
+        Errors.append('Error connecting to the database')
+
+
 
 
 # verifies if table 'TblPoints' exists. If not, it creates it.
-def create_project(conn):
-    print('Verifying table initialization', end="... ")
-    curs = conn.cursor()
-    x = 'description TEXT NULL'
-    for i in range(15):
-        x += f',ingredient{i+1} TEXT NULL'
-    sqlCmd = f'CREATE TABLE IF NOT EXISTS Recipes(title TEXT NOT NULL PRIMARY KEY,{x})'
-    curs.execute(sqlCmd)
+def create_project(conn, master):
+    global Errors
+    try:
+        master.statusVar.set('Verifying table initialization')
+        curs = conn.cursor()
+        x = 'description TEXT NULL'
+        for i in range(15):
+            x += f',ingredient{i+1} TEXT NULL'
+        sqlCmd = f'CREATE TABLE IF NOT EXISTS Recipes(title TEXT NOT NULL PRIMARY KEY,{x})'
+        curs.execute(sqlCmd)
+        master.statusVar.set('Table verified/created')
+    except:
+        Errors.append('Error initializing table')
 
 
-def lookAtDB(conn):
-    curs = conn.cursor()
-    curs.execute('SELECT * FROM Recipes ORDER BY description ASC')
-    recipeRows = curs.fetchall()
-    return recipeRows
+def lookAtDB(conn, gui):
+    global Errors
+    try:
+        gui.statusVar.set('Fetching recipes in database')
+        curs = conn.cursor()
+        curs.execute('SELECT * FROM Recipes ORDER BY description ASC')
+        recipeRows = curs.fetchall()
+        return recipeRows
+        gui.statusVar.set('Database recipes fetched')
+    except:
+        Errors.append('Error looking at the database')
 
 
-def pullRecTitles(conn):
-    curs = conn.cursor()
-    sqlCmd = (f"SELECT title FROM Recipes ORDER BY description DESC")
-    curs.execute(sqlCmd)
-    titles = curs.fetchall()
-    return titles
+
+def pullRecTitles(conn, gui):
+    try:
+        gui.statusVar.set('Retrieving recipe titles')
+        curs = conn.cursor()
+        sqlCmd = (f"SELECT title FROM Recipes ORDER BY description DESC")
+        curs.execute(sqlCmd)
+        titles = curs.fetchall()
+        return titles
+        gui.statusVar.set('Recipe list created')
+    except:
+        Errors.append('Error retrieving recipe titles')
 
 
-def pullRecIngredients(conn, recipeTitle='*'):
-    curs = conn.cursor()
-    x = 'ingredient1'
-    for i in range(14):
-        x += f',ingredient{i+1}'
-    curs.execute(f'SELECT {x} WHERE title = "{recipeTitle}"')
-    ingredientList = curs.fetchall()
-    return ingredientList
+
+def pullRecIngredients(conn, gui, recipeTitle='*'):
+    try:
+        gui.statusVar.set(f'Retrieving recipe ingredients for {recipeTitle}')
+        curs = conn.cursor()
+        x = 'ingredient1'
+        for i in range(14):
+            x += f',ingredient{i+1}'
+        curs.execute(f'SELECT {x} WHERE title = "{recipeTitle}"')
+        ingredientList = curs.fetchall()
+        return ingredientList
+        gui.statusVar.set(f'List of ingredients for {recipeTitle} retrieved')
+    except:
+        Errors.append(f'Error retrieving ingredients for {recipeTitle}')
 
 
-def addRecipe(conn, recipeListFile):
-    curs = conn.cursor()
-    # Using list comprehension, we compile recipe titles from our recipefileseed into one list to prevent duplication
-    recipeFileTitles = ([recipe[0] for recipe in recipeListFile])
-    for recipeFileTitle in recipeFileTitles:
-        dbRecTitles = pullRecTitles(conn)
-        # Using list comprehension, we compile recipe titles from our database into one list to prevent duplication
-        dbTitles = [title for title, in dbRecTitles]
-        if recipeFileTitle in dbTitles:
-            # print(f'{recipeFileTitle} is already in the database')
-            continue
-        else:
-            # print(f'trying to add recipe {recipeFileTitle}')
-            for recipe in recipeListFile:
-                ingredientColumns = 'ingredient1'
-                numArgs = '?,?,?'
-                for j in range(1, len(recipe)-2):
-                    ingredientColumns += f',ingredient{j + 1}'
-                    numArgs += f',?'
-                insert = f'INSERT INTO Recipes(title, description, {ingredientColumns})'
-                sqlCmd = f'{insert} VALUES({numArgs})'
-                curs.execute(sqlCmd, recipe)
-                conn.commit()
 
-    #rowUpdateStatement(len(dbList), curs, conn)
+def addRecipe(conn, recipeListFile, gui):
+    global Errors
+    try:
+        curs = conn.cursor()
+        # Using list comprehension, we compile recipe titles from our recipefileseed into one list to prevent duplication
+        recipeFileTitles = ([recipe[0] for recipe in recipeListFile])
+        for recipeFileTitle in recipeFileTitles:
+            gui.statusVar.set(f'Verifying {recipeFileTitle} recipe in database')
+            dbRecTitles = pullRecTitles(conn, gui)
+            # Using list comprehension, we compile recipe titles from our database into one list to prevent duplication
+            dbTitles = [title for title, in dbRecTitles]
+            if recipeFileTitle in dbTitles:
+                gui.statusVar.set(f'{recipeFileTitle} is already in the database')
+                continue
+            else:
+                gui.statusVar.set(f'trying to add {recipeFileTitle} recipe to database')
+                for recipe in recipeListFile:
+                    ingredientColumns = 'ingredient1'
+                    numArgs = '?,?,?'
+                    for j in range(1, len(recipe)-2):
+                        ingredientColumns += f',ingredient{j + 1}'
+                        numArgs += f',?'
+                    insert = f'INSERT INTO Recipes(title, description, {ingredientColumns})'
+                    sqlCmd = f'{insert} VALUES({numArgs})'
+                    curs.execute(sqlCmd, recipe)
+                    conn.commit()
+    except UnboundLocalError:
+        Errors.append(f'recipeListFile failed to load')
+    except sqlite3.IntegrityError:
+        Errors.append(f'{recipeFileTitle} failed to process. Recipe already exists in DB')
+            #except:
+    #    Errors.append(f'Error adding recipe')
+
+    #rowUpdateStatement(len(dbList), curs, conn, gui)
 
 
 # A statement that prints when database is asked to update information
-def rowUpdateStatement(numb, curs, conn):
-    numChanges = len(lookAtDB(conn)) - numb
+'''def rowUpdateStatement(numb, curs, conn, gui):
+    numChanges = len(lookAtDB(conn), gui) - numb
     if numChanges > 0:
         print("\t\t\t\tRecords inserted successfully into Recipes table:", numChanges, "\n")
     else:
-        print("\t\t\t\tNo new records were added to Recipes table\n")
+        print("\t\t\t\tNo new records were added to Recipes table\n")'''
 
 
 # loads recipes from database into the recipes listbox
 def loadRecipes(master, recipeRows):
-    for i in recipeRows:
-        master.recListbox.insert(tk.END, i[0])
+    global Errors
+    try:
+        master.statusVar.set('Loading recipes from database into GUI')
+        for i in recipeRows:
+            master.recListbox.insert(tk.END, i[0])
+    except:
+        Errors.append('Error reading recipes from database')
 
 
 def pullRecord(master, conn, self):
-    conn.text_factory = str
-    curs = conn.cursor()
-    name = [master.recListbox.get(tk.ANCHOR)]
-    sqlCom = '''SELECT * FROM Recipes WHERE title = (?)'''
-    curs.execute(sqlCom, name)
-    selectedRecipe = curs.fetchone()
-    addGroceries(selectedRecipe, master)
-
-
-globalGroceryList = []
+    try:
+        conn.text_factory = str
+        curs = conn.cursor()
+        name = [master.recListbox.get(tk.ANCHOR)]
+        master.statusVar.set(f'Fetching recipe from database for {name}')
+        sqlCom = '''SELECT * FROM Recipes WHERE title = (?)'''
+        curs.execute(sqlCom, name)
+        selectedRecipe = curs.fetchone()
+        addGroceries(selectedRecipe, master)
+    except:
+        Errors.append(f'Failed to fetch {name}')
 
 
 def addGroceries(selectedRecipe, master):
-    tempTemplist = []
-    glbList = []
-    # used to pull out information from recipe record that aren't ingredients with following if statement
-    notIngredients = ['NULL', selectedRecipe[0], selectedRecipe[1]]
-    for i in selectedRecipe:
-        if i in notIngredients:
-            continue
-        else:
-            if i is not None:
-                globalGroceryList.append(i)
-    # tempSet creates a set that removes redundant entries in our globalGroceryList to prepare formatting for our
-    # grocery listbox display
-    tempSet = set(globalGroceryList)
-    print(tempSet)
-    for i in tempSet:
-        tempTemplist.append(f'{i} ({globalGroceryList.count(i)})')
-    for i in tempTemplist:
-        glbList.append(i)
-    master.glbVar.set(glbList)
+    try:
+        master.statusVar.set(f'Adding ingredients from {selectedRecipe[0]} recipe to the grocery list')
+        tempTemplist = []
+        glbList = []
+        # used to pull out information from recipe record that aren't ingredients with following if statement
+        notIngredients = ['NULL', selectedRecipe[0], selectedRecipe[1]]
+        for i in selectedRecipe:
+            if i in notIngredients:
+                continue
+            else:
+                if i is not None:
+                    globalGroceryList.append(i)
+        # tempSet creates a set that removes redundant entries in our globalGroceryList to prepare formatting for our
+        # grocery listbox display
+        tempSet = set(globalGroceryList)
+        for i in tempSet:
+            tempTemplist.append(f'{i} ({globalGroceryList.count(i)})')
+        for i in tempTemplist:
+            glbList.append(i)
+        master.glbVar.set(glbList)
+    except:
+        Errors.append(f'Error adding ingredients from {selectedRecipe[0]} recipe to grocery list')
+    finally:
+        Errors.append(f'Ingredients for {selectedRecipe[0]} added successfully')
+
+
+def reportErrors(master):
+    if len(Errors) < 1:
+        master.statusVar.set('Program loaded successfully.')
+    else:
+        ErrorStatus = []
+        i = 0
+        while i <= len(Errors):
+            if len(ErrorStatus) < 1:
+                ErrorStatus.append(Errors[0])
+                Errors.pop(0)
+                i += 1
+            else:
+                ErrorStatus.append(Errors[0])
+                Errors.pop(0)
+                i += 1
+
+        master.statusVar.set(', '.join(ErrorStatus))
