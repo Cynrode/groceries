@@ -6,6 +6,9 @@ from my_Functions import *
 # Email: dhawk3@cnm.edu
 # Purpose: Help my wife and I create shopping list based around planned dinner recipes
 
+def loadConn():
+    return (conn, app)
+
 
 # Start GUI
 root = tk.Tk()
@@ -28,7 +31,7 @@ root.mainloop()
     a.	Use of loops and conditionals (while loops and if then for example)
     b.	Use of exception handling when getting user input where applicable.
     c.	Ability to save and retrieve data using either files and/or databases.
-        For example: if you make a game, save the high score. PICK ONE OR THE OTHER. DATBASE OR FILE
+        For example: if you make a game, save the high score. PICK ONE OR THE OTHER. DATABASE OR FILE
     d.	Ability to get input from the user
     e.	Ability to display information
     f.	Exhibit a reasonable level of complexity (Minimum 50-100 lines of code), Minimum of 3 Data Types in the code) .

@@ -131,15 +131,16 @@ class Window(tk.Toplevel):
         self.recipeField = tk.Entry(self)
         self.ingredientLabels = {}
         self.ingredientEntrys = {}
-        self.submitButton = tk.Button(self, text='Submit')
+        self.submitButton = tk.Button(self, text='Submit', command=lambda: (recipeCapture(self)))
         for i in range(1, 16):
             name = ('ingredient' + str(i))
             self.ingredientLabels[name] = tk.Label(self, text='Ingredient'+str(i),
-                                                   anchor='w').grid(column=0, row=i+1, padx=7,
-                                                                                        stick='ew')
-            self.ingredientEntrys[name] = tk.Entry(self).grid(column=1, row=i+1, padx=10, sticky='ew')
+                                                   anchor='w')
+            self.ingredientLabels[name].grid(column=0, row=i+1, padx=7, stick='ew')
+            self.ingredientEntrys[name] = tk.Entry(self)
+            self.ingredientEntrys[name].grid(column=1, row=i+1, padx=10, sticky='ew')
 
-        self.recipeLabel.grid(row=0, column=0, padx=10)
+        self.recipeLabel.grid(row=0, column=0, padx=10, sticky='ew')
         self.recipeField.grid(row=0, column=1, padx=10)
         self.submitButton.grid(row=17, column=0, columnspan=2, pady=10)
 
@@ -150,6 +151,20 @@ def ErrorWindow():
 
 
 def recipeCapture(self):
+    newRecipe = [self.recipeField.get()]
+    print(len(newRecipe))
+    if newRecipe[0] == "":
+        newRecipe.pop(0)
+        tk.messagebox.showinfo("Error", "The recipe must have a title")
+    else:
+        newRecipe.append('NULL')
+        for i in range (1, 16):
+            name = ('ingredient' + str(i))
+            if self.ingredientEntrys[name].get() == '':
+                continue
+            else:
+                newRecipe.append(self.ingredientEntrys[name].get())
+                
     return
 
 
