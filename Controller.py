@@ -9,143 +9,6 @@ globalGroceryList = []
 Errors = []
 
 
-class MainGui(tk.Frame):
-    def __init__(self, master, *args, **kwargs):
-        tk.Frame.__init__(self, master, *args, **kwargs)
-
-        self.master = master
-        myFrame = tk.Frame(master)
-        top = tk.Frame(master)
-        body = tk.Frame(master)
-        bottom = tk.Frame(master)
-        textInfo = tk.Frame(bottom, highlightbackground='grey', highlightthickness=1,
-                            background='white', border=2, height=5, width=7)
-
-        # Status bar
-        self.statusVar = tk.StringVar()
-        self.statusVar.set("Initial Value")
-        self.statusBar = tk.Label(master, textvariable=self.statusVar, bd=1, relief='sunken', anchor='w')
-
-        master.geometry("625x550")
-        master.title("Recipes to Groceries List")
-
-        # Creating Menu Bar
-        self.menubar = Menu(master)
-        master.config(menu=self.menubar)
-        file_menu = Menu(self.menubar)
-        self.menubar.add_cascade(label="File", menu=file_menu)
-        file_menu.add_command(
-            label='Exit',
-            command=master.destroy,
-        )
-        # top
-        self.instructions = tk.Label(top, text='Double click recipes to add ingredients to your shopping list\n',
-                                     font=25, padx=5, pady=5)
-        # body
-        self.recipesTitle = tk.Label(body, text='Recipes', font=("Arial", 15))
-        self.groceryTitle = tk.Label(body, text='Grocery List', font=("Arial", 15))
-        self.addRecipe = partial(addRecipe, )
-        self.recListbox = tk.Listbox(body)
-        self.recListbox.bind('<Double-Button-1>', addRecipe)
-        self.glbList = []
-        self.glbVar = tk.Variable(value='')
-        self.grocListbox = tk.Listbox(body, listvariable=self.glbVar)
-        # buttons
-        self.add_recipe = tk.Button(body, text='Add Recipe', command=lambda: (Window(master)))
-        self.remove_recipe = tk.Button(body, text='Remove Recipe', command=lambda: (removeRecipe(self)))
-        self.add_item = tk.Button(body, text='Add Item', command=ErrorWindow)
-        self.remove_item = tk.Button(body, text='Remove Item', command=ErrorWindow)
-        # bottom
-        # self.frame = tk.Frame(bottom)
-        self.saveBut = tk.Button(bottom, text='Save', command=ErrorWindow)
-        # textInfo Frame
-        self.TIdescriptVar = tk.StringVar()
-        self.TIdescriptVar.set("Description: ")
-        self.TIdescription = tk.Label(textInfo, textvariable=self.TIdescriptVar)
-
-        self.TIingredVar = tk.StringVar()
-        self.TIingredVar.set("Ingredients: ")
-        self.TIingredients = tk.Label(textInfo, textvariable=self.TIingredVar)
-
-        self.TIlinkVar = tk.StringVar()
-        self.TIlinkVar.set("Recipe Link: ")
-        self.TIlink = tk.Label(textInfo, textvariable=self.TIlinkVar)
-
-        # grid
-        # Top
-        top.grid(row=0, column=0, sticky='nsew')
-        self.instructions.grid(row=0, column=0, sticky='nw')
-
-        body.grid(row=1, column=0, columnspan=2, sticky='nsew')
-        # Left-side
-        self.recipesTitle.grid(row=0, column=0, columnspan=2, sticky='ew')
-        self.recListbox.grid(row=1, column=0, columnspan=2, sticky='nsew',
-                             padx=10)
-        self.add_recipe.grid(row=2, column=0, sticky='e',
-                             padx=5, pady=5)
-        self.remove_recipe.grid(row=2, column=1, sticky='w',
-                                padx=5, pady=5)
-        # Right-side
-        self.groceryTitle.grid(row=0, column=2, columnspan=2, sticky='ew')
-        self.grocListbox.grid(row=1, column=2, columnspan=2, sticky='nsew',
-                              padx=10)
-        self.add_item.grid(row=2, column=2, sticky='e',
-                           padx=5, pady=5)
-        self.remove_item.grid(row=2, column=3, sticky='w',
-                              padx=5, pady=5)
-
-        # bottom
-        bottom.grid(row=2, column=0, columnspan=2, sticky='nsew')
-        textInfo.grid(row=0, column=1, columnspan=2, sticky='nsew')
-        self.saveBut.grid(row=1, column=0, columnspan=3, pady=5)
-        self.statusBar.grid(row=3, column=0, columnspan=2, sticky='we')
-
-        # textInfo Frame
-        self.TIdescription.grid(row=0)
-        self.TIingredients.grid(row=1)
-        self.TIlink.grid(row=2)
-
-        # Geometry for dynamic resizing
-        body.columnconfigure(0, weight=1)
-        body.columnconfigure(1, weight=1)
-        body.columnconfigure(2, weight=1)
-        body.columnconfigure(3, weight=1)
-        body.rowconfigure(1, weight=1)
-
-        bottom.columnconfigure(0, weight=1)
-        bottom.columnconfigure(1, weight=1)
-        bottom.columnconfigure(2, weight=1)
-        bottom.rowconfigure(0, weight=1)
-        bottom.rowconfigure(1, weight=1)
-
-        master.rowconfigure(1, weight=1)
-        master.columnconfigure(0, weight=1)
-        master.columnconfigure(1, weight=1)
-
-
-class Window(tk.Toplevel):
-    def __init__(self, *args, **kwargs):
-        tk.Toplevel.__init__(self, *args, **kwargs)
-        self.grab_set()
-        self.recipeLabel = tk.Label(self, text='Recipe Name', anchor='w')
-        self.recipeField = tk.Entry(self)
-        self.ingredientLabels = {}
-        self.ingredientEntrys = {}
-        self.submitButton = tk.Button(self, text='Submit', command=lambda: (recipeCapture(self, )))
-        for i in range(1, 16):
-            name = ('ingredient' + str(i))
-            self.ingredientLabels[name] = tk.Label(self, text='Ingredient'+str(i),
-                                                   anchor='w')
-            self.ingredientLabels[name].grid(column=0, row=i+1, padx=7, stick='ew')
-            self.ingredientEntrys[name] = tk.Entry(self)
-            self.ingredientEntrys[name].grid(column=1, row=i+1, padx=10, sticky='ew')
-
-        self.recipeLabel.grid(row=0, column=0, padx=10, sticky='ew')
-        self.recipeField.grid(row=0, column=1, padx=10)
-        self.submitButton.grid(row=17, column=0, columnspan=2, pady=10)
-
-
-
 def ErrorWindow():
     tk.messagebox.showinfo("Error", "This feature is currently in development")
 
@@ -245,17 +108,14 @@ def pullRecTitles():
         Errors.append('Error retrieving recipe titles')
 
 
-def pullRecIngredients(conn, gui, recipeTitle='*'):
+def pullRecIngredients(recipeTitle):
     try:
-        gui.statusVar.set(f'Retrieving recipe ingredients for {recipeTitle}')
+        conn = create_connection()
         curs = conn.cursor()
-        x = 'ingredient1'
-        for i in range(14):
-            x += f',ingredient{i + 1}'
-        curs.execute(f'SELECT {x} WHERE title = "{recipeTitle}"')
-        ingredientList = curs.fetchall()
-        gui.statusVar.set(f'List of ingredients for {recipeTitle} retrieved')
-        return ingredientList
+        sqlCmd = f'SELECT * FROM Recipes WHERE title="{recipeTitle}"'
+        curs.execute(sqlCmd)
+        recipe = curs.fetchall()
+        return recipe
     except:
         Errors.append(f'Error retrieving ingredients for {recipeTitle}')
 
