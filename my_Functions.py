@@ -51,7 +51,7 @@ class MainGui(tk.Frame):
         self.glbVar = tk.Variable(value='')
         self.grocListbox = tk.Listbox(body, listvariable=self.glbVar)
         # buttons
-        self.add_recipe = tk.Button(body, text='Add Recipe', command=Window)
+        self.add_recipe = tk.Button(body, text='Add Recipe', command=lambda: (Window(master)))
         self.remove_recipe = tk.Button(body, text='Remove Recipe', command=lambda: (removeRecipe(self)))
         self.add_item = tk.Button(body, text='Add Item', command=ErrorWindow)
         self.remove_item = tk.Button(body, text='Remove Item', command=ErrorWindow)
@@ -123,7 +123,7 @@ class MainGui(tk.Frame):
         master.columnconfigure(1, weight=1)
 
 
-class Window(tk.Toplevel, MainGui):
+class Window(tk.Toplevel):
     def __init__(self, *args, **kwargs):
         tk.Toplevel.__init__(self, *args, **kwargs)
         self.grab_set()
@@ -131,7 +131,7 @@ class Window(tk.Toplevel, MainGui):
         self.recipeField = tk.Entry(self)
         self.ingredientLabels = {}
         self.ingredientEntrys = {}
-        self.submitButton = tk.Button(self, text='Submit', command=lambda: (recipeCapture(self)))
+        self.submitButton = tk.Button(self, text='Submit', command=lambda: (recipeCapture(self, )))
         for i in range(1, 16):
             name = ('ingredient' + str(i))
             self.ingredientLabels[name] = tk.Label(self, text='Ingredient'+str(i),
@@ -164,15 +164,16 @@ def recipeCapture(self):
                 continue
             else:
                 newRecipe.append(self.ingredientEntrys[name].get())
-    conn = create_connection()
     listOfList_LazyProgramming.append(newRecipe)
     addRecipe(listOfList_LazyProgramming)
     close_win(self)
+    loadRecipes(self)
     return
 
 
 def close_win(self):
-   self.destroy()
+    print(self.master)
+    self.destroy()
 
 
 def read_dbinit_file(master):
@@ -232,8 +233,9 @@ def lookAtDB():
         Errors.append('Error looking at the database')
 
 
-def pullRecTitles(conn):
+def pullRecTitles():
     try:
+        conn = create_connection()
         curs = conn.cursor()
         sqlCmd = (f"SELECT title FROM Recipes ORDER BY description DESC")
         curs.execute(sqlCmd)
@@ -258,55 +260,54 @@ def pullRecIngredients(conn, gui, recipeTitle='*'):
         Errors.append(f'Error retrieving ingredients for {recipeTitle}')
 
 
-def addRecipe(recipeListFile):
+def addRecipe(listOfRecipes):
     global Errors
     try:
         conn = create_connection()
         curs = conn.cursor()
-        # Using list comprehension, we compile recipe titles from our recipefileseed into one list to prevent duplication
-        recipeFileTitles = ([recipe[0] for recipe in recipeListFile])
-        for recipeFileTitle in recipeFileTitles:
-            dbRecTitles = pullRecTitles(conn)
-            # Using list comprehension, we compile recipe titles from our database into one list to prevent duplication
-            dbTitles = [title for title, in dbRecTitles]
-            if recipeFileTitle in dbTitles:
+        # Using list comprehension, we compile recipe titles from our recipefileseed into one list to prevent
+        # duplication
+        rfTitles = [recipe[0] for recipe in listOfRecipes]
+        # We create a dictionary from our recipes passed to the function (setup this way in case we want to pass files
+        # with several recipes inside) as a dictionary (hash map) and then use the recipe title as our key. This follows
+        # our database design built to use recipe title as the primary key. In the future, we can build this around a
+        # more complex primary key, such as title + author.
+        recipeDict = {rfTitles[i]: listOfRecipes[i] for i in range(len(listOfRecipes))}
+        # Pull all recipe titles from our database
+        dbRecTitles = pullRecTitles()
+        # Using list comprehension, we compile recipe titles from our database into one list to prevent duplication
+        dbTitles = [title for title, in dbRecTitles]
+        for title in rfTitles:
+            if title in dbTitles:
                 continue
             else:
-                for recipe in recipeListFile:
-                    ingredientColumns = 'ingredient1'
-                    numArgs = '?,?,?'
-                    for j in range(1, len(recipe) - 2):
-                        ingredientColumns += f',ingredient{j + 1}'
-                        numArgs += f',?'
-                    insert = f'INSERT INTO Recipes(title, description, {ingredientColumns})'
-                    sqlCmd = f'{insert} VALUES({numArgs})'
-                    curs.execute(sqlCmd, recipe)
-                    conn.commit()
+                recipe = recipeDict.get(title)
+                ingredientColumns = 'ingredient1'
+                numArgs = '?,?,?'
+                for j in range(1, len(recipe) - 2):
+                    ingredientColumns += f',ingredient{j + 1}'
+                    numArgs += f',?'
+                insert = f'INSERT INTO Recipes(title, description, {ingredientColumns})'
+                sqlCmd = f'{insert} VALUES({numArgs})'
+                curs.execute(sqlCmd, recipe)
+                conn.commit()
     except UnboundLocalError:
         Errors.append(f'recipeListFile failed to load')
+    except IndexError:
+        Errors.append(IndexError)
+        print(IndexError)
     except sqlite3.IntegrityError:
-        Errors.append(f'{recipeFileTitle} failed to process. Recipe already exists in DB')
-        # except:
-    #    Errors.append(f'Error adding recipe')
-
-    # rowUpdateStatement(len(dbList), curs, conn, gui)
-
-
-# A statement that prints when database is asked to update information
-'''def rowUpdateStatement(numb, curs, conn, gui):
-    numChanges = len(lookAtDB(conn), gui) - numb
-    if numChanges > 0:
-        print("\t\t\t\tRecords inserted successfully into Recipes table:", numChanges, "\n")
-    else:
-        print("\t\t\t\tNo new records were added to Recipes table\n")'''
+        Errors.append(f'{title} failed to process. Recipe already exists in DB')
 
 
 # loads recipes from database into the recipes listbox
 def loadRecipes(master):
     recipeRows = lookAtDB()
+    dbRecipeLoad = []
     global Errors
     try:
         master.statusVar.set('Loading recipes from database into GUI')
+        master.recListbox.delete(0, tk.END)
         for i in recipeRows:
             master.recListbox.insert(tk.END, i[0])
     except:
@@ -381,5 +382,6 @@ def removeRecipe(master):
         master.statusVar.set(f'Deleting recipe from database for {name[0]}')
         curs.execute('DELETE FROM Recipes WHERE title=?', name)
         conn.commit()
+        loadRecipes(master)
     except:
         Errors.append(f'Failed to delete {name}')
