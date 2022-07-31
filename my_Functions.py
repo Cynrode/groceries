@@ -52,7 +52,7 @@ class MainGui(tk.Frame):
         self.grocListbox = tk.Listbox(body, listvariable=self.glbVar)
         # buttons
         self.add_recipe = tk.Button(body, text='Add Recipe', command=Window)
-        self.remove_recipe = tk.Button(body, text='Remove Recipe', command=ErrorWindow)
+        self.remove_recipe = tk.Button(body, text='Remove Recipe', command=lambda: (removeRecipe(self)))
         self.add_item = tk.Button(body, text='Add Item', command=ErrorWindow)
         self.remove_item = tk.Button(body, text='Remove Item', command=ErrorWindow)
         # bottom
@@ -123,7 +123,7 @@ class MainGui(tk.Frame):
         master.columnconfigure(1, weight=1)
 
 
-class Window(tk.Toplevel):
+class Window(tk.Toplevel, MainGui):
     def __init__(self, *args, **kwargs):
         tk.Toplevel.__init__(self, *args, **kwargs)
         self.grab_set()
@@ -152,20 +152,27 @@ def ErrorWindow():
 
 def recipeCapture(self):
     newRecipe = [self.recipeField.get()]
-    print(len(newRecipe))
+    listOfList_LazyProgramming = []
     if newRecipe[0] == "":
         newRecipe.pop(0)
         tk.messagebox.showinfo("Error", "The recipe must have a title")
     else:
         newRecipe.append('NULL')
-        for i in range (1, 16):
+        for i in range(1, 16):
             name = ('ingredient' + str(i))
             if self.ingredientEntrys[name].get() == '':
                 continue
             else:
                 newRecipe.append(self.ingredientEntrys[name].get())
-                
+    conn = create_connection()
+    listOfList_LazyProgramming.append(newRecipe)
+    addRecipe(listOfList_LazyProgramming)
+    close_win(self)
     return
+
+
+def close_win(self):
+   self.destroy()
 
 
 def read_dbinit_file(master):
@@ -188,13 +195,10 @@ def read_dbinit_file(master):
         Errors.append('Error reading startup recipes')
 
 
-def create_connection(gui):
+def create_connection():
     try:
         dbname = 'Grocery_DB'
-        conn = None
-        gui.statusVar.set('Connecting to database')
         conn = sqlite3.connect(dbname)
-        gui.statusVar.set('Connected')
         return conn
     except:
         Errors.append('Error connecting to the database')
@@ -216,27 +220,24 @@ def create_project(conn, master):
         Errors.append('Error initializing table')
 
 
-def lookAtDB(conn, gui):
+def lookAtDB():
     global Errors
+    conn = create_connection()
     try:
-        gui.statusVar.set('Fetching recipes in database')
         curs = conn.cursor()
         curs.execute('SELECT * FROM Recipes ORDER BY description ASC')
         recipeRows = curs.fetchall()
-        gui.statusVar.set('Database recipes fetched')
         return recipeRows
     except:
         Errors.append('Error looking at the database')
 
 
-def pullRecTitles(conn, gui):
+def pullRecTitles(conn):
     try:
-        gui.statusVar.set('Retrieving recipe titles')
         curs = conn.cursor()
         sqlCmd = (f"SELECT title FROM Recipes ORDER BY description DESC")
         curs.execute(sqlCmd)
         titles = curs.fetchall()
-        gui.statusVar.set('Recipe list created')
         return titles
     except:
         Errors.append('Error retrieving recipe titles')
@@ -257,22 +258,20 @@ def pullRecIngredients(conn, gui, recipeTitle='*'):
         Errors.append(f'Error retrieving ingredients for {recipeTitle}')
 
 
-def addRecipe(conn, recipeListFile, gui):
+def addRecipe(recipeListFile):
     global Errors
     try:
+        conn = create_connection()
         curs = conn.cursor()
         # Using list comprehension, we compile recipe titles from our recipefileseed into one list to prevent duplication
         recipeFileTitles = ([recipe[0] for recipe in recipeListFile])
         for recipeFileTitle in recipeFileTitles:
-            gui.statusVar.set(f'Verifying {recipeFileTitle} recipe in database')
-            dbRecTitles = pullRecTitles(conn, gui)
+            dbRecTitles = pullRecTitles(conn)
             # Using list comprehension, we compile recipe titles from our database into one list to prevent duplication
             dbTitles = [title for title, in dbRecTitles]
             if recipeFileTitle in dbTitles:
-                gui.statusVar.set(f'{recipeFileTitle} is already in the database')
                 continue
             else:
-                gui.statusVar.set(f'trying to add {recipeFileTitle} recipe to database')
                 for recipe in recipeListFile:
                     ingredientColumns = 'ingredient1'
                     numArgs = '?,?,?'
@@ -303,7 +302,8 @@ def addRecipe(conn, recipeListFile, gui):
 
 
 # loads recipes from database into the recipes listbox
-def loadRecipes(master, recipeRows):
+def loadRecipes(master):
+    recipeRows = lookAtDB()
     global Errors
     try:
         master.statusVar.set('Loading recipes from database into GUI')
@@ -369,5 +369,17 @@ def reportErrors(master):
                 ErrorStatus.append(Errors[0])
                 Errors.pop(0)
                 i += 1
-
         master.statusVar.set(', '.join(ErrorStatus))
+
+
+def removeRecipe(master):
+    name = [master.recListbox.get(tk.ANCHOR)]
+    conn = create_connection()
+    try:
+        conn.text_factory = str
+        curs = conn.cursor()
+        master.statusVar.set(f'Deleting recipe from database for {name[0]}')
+        curs.execute('DELETE FROM Recipes WHERE title=?', name)
+        conn.commit()
+    except:
+        Errors.append(f'Failed to delete {name}')

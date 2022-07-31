@@ -6,24 +6,23 @@ from my_Functions import *
 # Email: dhawk3@cnm.edu
 # Purpose: Help my wife and I create shopping list based around planned dinner recipes
 
-def loadConn():
-    return (conn, app)
-
 
 # Start GUI
 root = tk.Tk()
 app = MainGui(root)
 
-conn = create_connection(app)
+conn = create_connection()
 create_project(conn, app)
 db_init_fileList = read_dbinit_file(app)
-addRecipe(conn, db_init_fileList, app)
-loadRecipes(app, lookAtDB(conn, app))
+addRecipe(db_init_fileList)
+loadRecipes(app)
 Errors = reportErrors(app)
 
 
 pullRecord = partial(pullRecord, app, conn)
 app.recListbox.bind('<Double-Button-1>', pullRecord)
+
+
 
 #End GUI
 root.mainloop()
